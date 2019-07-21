@@ -21,21 +21,27 @@ nodes <- tibble(
   select(node, name)
 
 # Create links tibble
+# TODO add group
 links <- spendings %>% 
   inner_join(nodes, by = c("c" = "name")) %>% 
   inner_join(nodes, by = c("s" = "name")) %>% 
+  mutate(group = case_when(.$s == "Patrik" ~ "patrik_link",
+                           .$s == "Moa" ~ "moa_link",
+                           TRUE ~ "other_links")) %>% 
   select(source = node.x,
          target = node.y,
-         value = p) %>% 
-  group_by(source, target) %>% 
-  summarise(value = sum(value))
+         value = p,
+         group)
+#%>% 
+ # group_by(source, target) %>% 
+#  summarise(value = sum(value))
 
-# Total spendings - sum of NY, LA and SF
+# Total spendings - sum of Patrik, Moa
 total_sp <- pull(
   links %>% 
   filter(target %in% pull( 
     nodes %>% 
-      filter(name %in% c("New York", "Los Angeles", "San Francisco")) %>% 
+      filter(name %in% c("Other", "New York", "Los Angeles", "San Francisco")) %>% 
       select(node)  
   )) %>% 
   summarise(total_sp = sum(value))
@@ -49,7 +55,16 @@ nodes <- nodes %>%
   ungroup() %>% 
   mutate(cum_value = ifelse(is.na(cum_value), total_sp, cum_value),
          combined_name = paste0(name, ": $", cum_value)) %>% 
-  select(node, name = combined_name)
+  mutate(group = case_when(.$name == "Patrik" ~ "patrik_node",
+                           .$name == "Moa" ~ "moa_node",
+                           TRUE ~ "other_nodes")) %>% 
+  select(node, name = combined_name, group)
+
+# Customization
+my_color <- 'd3.scaleOrdinal() .domain(["patrik_node", "patrik_link", "moa_node", "moa_link", "other_nodes", "other_links"]) 
+              .range(["cadetblue", "aquamarine", "palevioletred", "lightpink", "slategray", "gainsboro"])'
 
 # Draw Sankey network
-sankeyNetwork(Links = links, Nodes = nodes, Source = "source", Target = "target", Value = "value", NodeID = "name", units = "$")
+sankeyNetwork(Links = links, Nodes = nodes, Source = "source", Target = "target", Value = "value", NodeID = "name", units = "$",
+              colourScale = my_color, LinkGroup = "group", NodeGroup = "group", fontSize = 12, fontFamily = "Trebuchet MS",
+              nodeWidth = 10, sinksRight = FALSE)
