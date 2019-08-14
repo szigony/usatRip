@@ -2,6 +2,7 @@
 library(dplyr)
 library(networkD3)
 library(tidyr)
+library(tidyverse)
 
 # Initiate a tibble
 spendings <- tibble(c = character(), s = character(), p = numeric())
@@ -21,22 +22,18 @@ nodes <- tibble(
   select(node, name)
 
 # Create links tibble
-# TODO add group
 links <- spendings %>% 
   inner_join(nodes, by = c("c" = "name")) %>% 
   inner_join(nodes, by = c("s" = "name")) %>% 
-  mutate(group = case_when(.$s == "Patrik" ~ "patrik_link",
-                           .$s == "Moa" ~ "moa_link",
+  mutate(group = case_when(.$s == "Me" ~ "me_link",
+                           .$s == "Girlfriend" ~ "gf_link",
                            TRUE ~ "other_links")) %>% 
   select(source = node.x,
          target = node.y,
          value = p,
          group)
-#%>% 
- # group_by(source, target) %>% 
-#  summarise(value = sum(value))
 
-# Total spendings - sum of Patrik, Moa
+# Total spendings - sum of me and girlfriend
 total_sp <- pull(
   links %>% 
   filter(target %in% pull( 
@@ -55,14 +52,14 @@ nodes <- nodes %>%
   ungroup() %>% 
   mutate(cum_value = ifelse(is.na(cum_value), total_sp, cum_value),
          combined_name = paste0(name, ": $", cum_value)) %>% 
-  mutate(group = case_when(.$name == "Patrik" ~ "patrik_node",
-                           .$name == "Moa" ~ "moa_node",
+  mutate(group = case_when(.$name == "Me" ~ "me_node",
+                           .$name == "Girlfriend" ~ "gf_node",
                            TRUE ~ "other_nodes")) %>% 
   select(node, name = combined_name, group)
 
 # Customization
-my_color <- 'd3.scaleOrdinal() .domain(["patrik_node", "patrik_link", "moa_node", "moa_link", "other_nodes", "other_links"]) 
-              .range(["cadetblue", "aquamarine", "palevioletred", "lightpink", "slategray", "gainsboro"])'
+my_color <- 'd3.scaleOrdinal() .domain(["me_node", "me_link", "gf_node", "gf_link", "other_nodes", "other_links"]) 
+              .range(["deepskyblue", "skyblue", "palevioletred", "lightpink", "slategray", "gainsboro"])'
 
 # Draw Sankey network
 sankeyNetwork(Links = links, Nodes = nodes, Source = "source", Target = "target", Value = "value", NodeID = "name", units = "$",
